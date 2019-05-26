@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <xs:element name="Airline">
+ 	<xs:complexType >
+  		<xs:sequence>
+     		 <xs:element name="Passenger" type="Person" minOccurs="0" maxOccurs="unbounded"/>
+    		 <xs:element name="Employee" type="Employee" minOccurs="1" maxOccurs="unbounded"/>
+     		 <xs:element name="Pilot" type="Pilot" minOccurs="1" maxOccurs="unbounded"/>
+     		 <xs:element name="Fare" type="Fare" minOccurs="0" maxOccurs="unbounded"/>
+     		 <xs:element name="Flight" type="Flight" minOccurs="0" maxOccurs="unbounded"/>
+     		 <xs:element name="Department" type="Department" minOccurs="1" maxOccurs="unbounded"/>
+   		 </xs:sequence>
+   		  	<xs:attribute name="AirlineName"/>
+  	</xs:complexType>
+  	<xs:key name="PassengerKey"><!-- Passenger aka Person has a unique ID so we declare an index for it-->
+		<xs:selector xpath="Airline/Passenger"/>
+		<xs:field xpath="@ID"/>
+	</xs:key>
+	<xs:keyref name="PassengerRef" refer="PassengerKey"><!-- Ticket has a reference to a passengers ID-->
+	<xs:selector xpath="Airline/Flight/Ticket"/>
+	<xs:field xpath="@PassengerID"/>
+	</xs:keyref>
+	
+  	<xs:key name="EmployeeKey">
+		<xs:selector xpath="Airline/Employee"/><!-- Employee extends person therefore also has a unique ID -->
+		<xs:field xpath="@ID"/>
+	</xs:key>
+	<xs:keyref name="EmployeeRef" refer="EmployeeKey"><!-- Employee has a supervisor that references another employee -->
+		<xs:selector xpath="Airline/Employee"/>
+		<xs:field xpath="@Supervisor"/>
+	</xs:keyref>
+	
+	 <xs:key name="DepartmentKey"><!-- Each Department in an airline has a unique department code -->
+		<xs:selector xpath="Airline/Department"/>
+		<xs:field xpath="@Code"/>
+	</xs:key>
+	<xs:keyref name="DepartmentRef" refer="DepartmentKey"> <!-- Each Employee has a reference to the department they work in -->
+		<xs:selector xpath="Airline/Employee"/>
+		<xs:field xpath="@DepartmentID"/>
+	</xs:keyref>
+	
+	<xs:keyref name="CrewRef" refer="EmployeeKey"><!-- A flight holds references to employees that are crew -->
+		<xs:selector xpath="Airline/Flight"/>
+		<xs:field xpath="@Crew"/>
+	</xs:keyref>
+	
+	
+	<xs:key name="PilotKey"><!-- A Pilot Extends an employee therefore also has an unique ID -->
+		<xs:selector xpath="Airline/Pilot"/>
+		<xs:field xpath="@ID"/>
+	</xs:key>
+	<xs:keyref name="PilotRef" refer="PilotKey"><!-- A flight holds references to their pilots -->
+		<xs:selector xpath="Airline/Flight"/>
+		<xs:field xpath="@Pilot"/>
+	</xs:keyref>
+	
+	<xs:key name="FareKey"><!-- Each Fare has a Unique Fare Type -->
+		<xs:selector xpath="Airline/Fare"/>
+		<xs:field xpath="@FareType"/>
+	</xs:key>
+	<xs:keyref name="FareRef" refer="FareKey"><!-- Each Ticket has a reference to a fare -->
+		<xs:selector xpath="Airline/Flight/Ticket"/>
+		<xs:field xpath="@FareType"/>
+	</xs:keyref>
+  </xs:element>
+  
+  <xs:simpleType name="name"><!-- Used to limit noun type inputs to include characters a to Z in addition to special characters (' ','.','-') -->
+    <xs:restriction base="xs:string">
+        <xs:pattern value="[a-zA-Z. -]{2,50}"/>
+    </xs:restriction>
+  </xs:simpleType>
+  
+  <xs:simpleType name="ssn"><!-- Regular to restrict SSN input to XXX-XX-XXXX format -->
+    <xs:restriction base="xs:string">
+        <xs:pattern value="[0-9]{3}-[0-9]{2}-[0-9]{4}"/>
+    </xs:restriction>
+  </xs:simpleType>
+           
+  <xs:complexType name="Person"><!-- Acts as the Passenger in an airline and a Parent to Employee -->
+    <xs:sequence>
+      <xs:element name="FirstName" type="name"/>
+      <xs:element name="LastName" type="name"/>
+      <xs:element name="DateOfBirth" type="xs:date"/>
+      <xs:element name="Nationality" type="name"/>
+      <xs:element name="PassportNumber" type="xs:string"/>   
+    </xs:sequence>
+    <xs:attribute name="ID" type="xs:ID"  use="required"/> <!-- PK -->
+  </xs:complexType>
+  
+  <xs:complexType name="Employee"><!-- Additional Details required for an employee -->
+	<xs:complexContent>
+	      <xs:extension base="Person">
+	        <xs:sequence>
+ 			<xs:element name="Salary">
+ 				<xs:simpleType>
+    			<xs:restriction base="xs:positiveInteger">
+     				<xs:minInclusive value="1000"/>
+      				<xs:maxInclusive value="1000000"/>
+    		  	</xs:restriction>
+  			  </xs:simpleType>
+  			  </xs:element>
+	          <xs:element name="StartDate" type="xs:date"/>
+	          <xs:element name="SSN" type="ssn"/><!-- Make special data type -->
+	        </xs:sequence>
+	     	   <xs:attribute name="Supervisor" type="xs:IDREF"/><!-- Employee references their supervisor (FK)-->
+	           <xs:attribute name="DepartmentID" type="xs:IDREF"  use="required"/><!-- Employee references the department(FK) they work in  -->
+	      </xs:extension>
+	</xs:complexContent>
+  </xs:complexType>
+  
+  <xs:complexType name="Pilot"><!-- Pilot is a child to an employee -->
+	<xs:complexContent>
+	      <xs:extension base="Employee">
+	        <xs:sequence>       
+	          <xs:element name="DateOfIssue" type="xs:date"/>
+	        </xs:sequence>
+	        <xs:attribute name="CertificateNumber" type="xs:positiveInteger"  use="required"/><!-- Each pilot has a license (PK)-->
+	      </xs:extension>
+	</xs:complexContent>
+  </xs:complexType>
+  
+  <xs:complexType name="Department"><!-- Employees work in a department -->
+    <xs:sequence>
+      <xs:element name="Name" type="name"/>
+    </xs:sequence>
+    <xs:attribute name="Manager" type="xs:IDREF"  use="required"/><!-- A Department holds a reference to its manager(FK) -->
+    <xs:attribute name="Code" type="xs:ID"  use="required"/><!-- A department has a unique code(PK) to it -->
+  </xs:complexType>
+  
+  <xs:complexType name="Ticket"><!-- Each Flight Holds its tickets -->
+     <xs:sequence>
+       <xs:element name="SeatNumber" type="xs:positiveInteger"/>
+	</xs:sequence>
+    <xs:attribute name="PassengerID" type="xs:IDREF"  use="required"/><!-- a ticket holds a reference to its passengers ID -->
+    <xs:attribute name="FareType" type="xs:IDREF"  use="required"/><!-- a ticket holds a reference to the fare paid -->
+  </xs:complexType>
+  
+  <xs:complexType name="Fare">
+    <xs:sequence>
+      <xs:element name="Fare" type="xs:positiveInteger"/>
+      <xs:element name="FareName" type="xs:string"/>
+    </xs:sequence>
+    <xs:attribute name="FareType" type="xs:ID"  use="required"/>
+  </xs:complexType>
+  
+  <xs:complexType name="Flight">
+    <xs:sequence>
+      <xs:element name="Pilot" type="xs:IDREF" minOccurs="1" maxOccurs="unbounded"/><!-- A flight holds references to its pilots -->
+      <xs:element name="Crew" type="xs:IDREF" minOccurs="0" maxOccurs="unbounded"/><!-- A flight holds references to its pilots -->
+      <xs:element name="DepartureTime" type="xs:dateTime"/>
+      <xs:element name="ArrivalTime" type="xs:dateTime"/>
+      <xs:element name="Source" type="name"/>
+      <xs:element name="Destination" type="name" />
+      <xs:element name="Ticket" type="Ticket" minOccurs="0" maxOccurs="unbounded"/> <!-- A Flight holds all tickets belonging to that flight -->
+    </xs:sequence>
+   	 <xs:attribute name="FlightCode" type="xs:ID" use="required"/>   <!--  each flight has its on ID(PK) -->
+  </xs:complexType>
+</xs:schema>
